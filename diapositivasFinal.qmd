@@ -1,0 +1,518 @@
+---
+title: ´Modelo Tobit´
+author: Iza J.,Guerra D., Lopez G., Michilena M., Oña M.
+format: 
+  revealjs:
+    theme: simple
+    transition: slide
+    slide-number: true
+    controls: true
+    progress: true
+    center: true
+    navigation-mode: linear
+    preview-links: true
+    scrollable: true
+    toc: true
+editor: visual
+---
+
+
+# Tema de Investigación
+
+## Factores determinantes de la participación femenina en cargos gerenciales  
+### Sector manufacturero ecuatoriano (2023)
+
+---
+
+# Pregunta de Investigación
+
+::: {.panel-tabset}
+## Q1  
+¿Cuáles factores determinan la contratación de mujeres en gerencia en empresas manufactureras del Ecuador (2023)?
+
+## ENFOQUE  
+Análisis cuantitativo con datos ENESEM 2023  
+Modelo Tobit para datos censurados
+:::
+
+---
+
+# Objetivos
+
+## Objetivo General  
+Analizar los determinantes de participación femenina en gerencia mediante modelo Tobit (ENESEM 2023)
+
+---
+
+## Objetivos Específicos  
+
+- **1. Identificar** variables clave:  
+  - Económicas (antigüedad, sector)  
+  - Sociodemográficas (número de mujeres en empresas)  
+  - Organizacionales (políticas de equidad)  
+
+- **2. Estimar** efectos marginales con modelo Tobit  
+
+- **3. Evaluar** significancia estadística  
+
+---
+
+# Literatura
+**Teoría del capital humano (Becker, 1964):** Explica brechas laborales por diferencias en formación, pero estudios (Cotter et al., 2001) muestran que persisten desigualdades incluso con igual cualificación.
+---
+
+**Techo de cristal:** Barreras invisibles que limitan el ascenso femenino a altos cargos, reduciendo su representación en gerencia (Deloitte, 2016).
+---
+
+**Segmentación laboral (Doeringer & Piore, 1971):** Mercado dividido en sectores; mujeres se concentran en roles peor remunerados, mientras hombres dominan puestos gerenciales.
+---
+
+# Base de datos: ENESEM 2023 INEC
+
+---
+
+## Ecuaciones
+
+---
+
+# Variables del Estudio
+
+## Variable Dependiente  
+**V5008**: Número de mujeres en cargos gerenciales  
+- Tipo: Cuantitativa discreta  
+- Rango: 0 a N
+
+---
+---
+
+## Variables Independientes
+
+| Variable                     | Tipo                   | Signo Esperado |
+|-----------------------------|------------------------|----------------|
+| des_tamano (Tamaño)         | Categórica ordinal     | +              |
+| edad (Antigüedad empresa)   | Numérica               | ±              |
+| totalpeoc (Personal ocupado)| Numérica               | +              |
+| v5089 (Mujeres en la empresa)| Numérica              | +              |
+| capital_social_nac_privado | Numérica (USD)         | +              |
+| utilidad (Utilidad empresa) | Binaria (1/0)          | +              |
+
+---
+
+```{r}
+# Cargar la base .sav
+library(haven)
+base_t_sav <- read_sav("~/DATA ANALITICS CON R C1/2023_ESTRUCTURAL_EMPRESARIAL_BDD.sav")
+```
+
+```{r}
+library(dplyr)
+b1 <- base_t_sav%>% 
+  dplyr::select(f_exp,
+                id_empresa,
+                v5008,
+         des_tamano,
+         des_sector,
+         anio_ruc_dis,
+         totalpeoc,
+         v5089,
+         capital_social_nac_privado,
+         v1203) %>%
+  na.omit() %>%
+  filter(des_sector=="Manufactura")
+```
+
+```{r}
+#| label: Crear variables
+
+b1<- b1%>%
+  mutate(edad=2023-as.numeric(anio_ruc_dis),
+         utilidad=ifelse(v1203>0,1,0))%>%
+na.omit()
+
+
+```
+---
+
+## Exploración de la variable dependiente:
+
+```{r}
+summary(b1$v5008)
+```
+---
+### Histograma de la cantidad de mujeres gerentes
+
+```{r}
+#| label: Histograma Cantidad de gerentes mujeres 
+#| fig-cap: "Distribución de gerentes mujeres en empresas"
+
+library(ggplot2)
+
+ggplot(data = b1, aes(x=v5008))+geom_histogram(bindwidth=20, fill="#E87687")+
+ theme_bw()+
+ labs(
+    title = "Distribución de gerentes mujeres en empresas",
+    x = "Número de gerentes mujeres",
+    y = "Frecuencia",
+    caption = "Fuente: Elaboración propia con datos de INEC"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5)  # Título en negrita y centrado
+  )
+
+
+```
+---
+### Estimación MCO
+
+```{r}
+#| label: Estimación MCO 
+#| message: false
+#| warning: false
+
+model.mco <- lm(v5008~
+                 des_tamano+
+                 edad+
+                 totalpeoc+
+                  capital_social_nac_privado+
+                v5089+
+                  utilidad,
+                data=b1) 
+
+# Resultados con stargazer 
+library(stargazer)
+stargazer(model.mco,
+          type = "text",
+          title = "Determinantes de Gerentes Mujeres en Empresas",
+          dep.var.labels = "Número de gerentes mujeres (v5008)",
+          covariate.labels = c("Tamaño empresa", 
+                              "Edad(años)", 
+                              "T. Personal ocupado",
+                              "CapitalSNP(USD)",
+                              "T.Mujeres(v5089)",
+                              "Utilidad(1=Sí/0=No)"),
+          digits = 2,
+          align = TRUE,
+          notes = "Fuente: Elaboración propia con datos INEC",
+          notes.align = "l")
+```
+---
+
+## Interpretaciones MCO
+1.  Empresas medianas A: -0.244 Una empresa mediana A contrata 24% menos mujeres gerentes vs empresa grande
+
+2.  Empresas medianas tipo B: -0.025 Las empresas medianas tipo A presentan una reducción de 2,5% en el número gerentes mujeres en comparación con las empresas grandes
+
+3.  Edad: 0.04 Por cada año adicional de de la empresa, el número de contratación de mujeres aumenta en 4%
+
+----
+
+## Interpretaciones MCO
+4.  Personal ocupado: 0.003 Por cada empleado adicional el número de gerentes mujeres se incrementa en 0.3%
+
+5.  Capital social: 0.001 Por cada dólar adicional, se espera un aumento de 0.1% de gerentes mujeres
+
+6.  v5089: 0.0002 Por cada mujer adicional contratada en la empresa (variable), el número de gerentes mujeres se incrementa en 0.02%
+
+7.  Utilidad: -0.225 Si una empresa tiene utilidades contrata 22.5% menos mujeres vs empresa sin utilidades
+
+---
+
+### Ajuste de la variable Y
+A continuación se verifica si la variable Y ajustada tiene variables menores que cero. Tiene valores negativos,por lo que podemos concluir que no es un buen ajuste.
+```{r}
+#| label: Variable Y ajustada 
+
+summary(model.mco$fitted.values)
+```
+---
+
+## Evaluación del Modelo TOBIT
+Por lo antes mencionado ajustamos la variable dependiente $V5008$ con un modelo **TOBIT**
+
+Verificamos el cumplimiento de la variable $V5008$ para usar el modelo Tobit y la convertimos en una variable dicotómica.
+
+```{r}
+#| label: Transformación de la variable dependiente 
+
+b1$dico.propia <- ifelse(b1$v5008==0,0,1)
+
+# Calculamos el porcentaje de ceros en la variable dependiente Y 
+prop.table(table(b1$dico.propia))*100
+```
+---
+
+## Modelo Tobit
+```{r}
+#| label: Modelo TOBIT 
+#| warning: false
+
+library(censReg)
+
+model.tobit <- censReg(v5008~
+                 des_tamano+
+                 edad+
+                 totalpeoc+
+                   capital_social_nac_privado+
+                v5089+
+                  utilidad,
+               data=b1,
+               left=0)
+stargazer(model.tobit, type = "text")
+
+```
+---
+
+## Comparación del Moldeo MCO y TOBIT
+
+```{r}
+#| label: Comparación de modelos 
+#| warning: false
+
+stargazer(model.mco, 
+          model.tobit, 
+          digits = 2,
+          type = "text",
+          df=F,
+          title = "Estimación Tobit y MCO del número de gerentes en las empresas de industria manufacturera",
+          dep.var.labels = "Variable dependiente: Número de mujeres gerentes",
+          header = F,
+          column.labels = c("MCO", "Tobit"),
+          model.names = F)
+```
+---
+
+## Efectos marginales del Modelo TOBIT
+
+```{r}
+#| label: Efectos marginales del Modelo TOBIT
+
+summary(margEff(model.tobit))
+```
+---
+
+## Interpretaciones
+
+1.  Empresas medianas A: -0,774 Una empresa mediana A contrata 77,4% menos mujeres gerentes vs empresa grande
+
+2.  Empresas medianas tipo B -0,194 Las empresas medianas tipo A presentan una reducción de 19,4% en el número gerentes mujeres en comparación con las empresas grandes
+
+3.  Edad: 0.030 Por cada año adicional de de la empresa, el número de contratación de mujeres aumenta en 3%
+
+4.  Personal ocupado: 0.002 Por cada empleado adicional el número de gerentes mujeres se incrementa en 0.2%
+
+---
+
+## Interpretaciones
+5.  Capital social: -0,001 Por cada dólar adicional, se espera una reducción de 0.1% de gerentes mujeres
+
+6.  v5089: 0.0001 Por cada mujer adicional contratada en la empresa (variable), el número de gerentes mujeres se incrementa en 0.01%
+
+7.  Utilidad: 0.1767 Si una empresa tiene utilidades contrata 17,67% más mujeres vs empresa sin utilidades
+
+---
+
+## No linealidad del modelo Tobit
+
+```{r}
+#|label: No linealidad del modelo Tobit 
+#| warning: false
+
+mod.stobit <- censReg(v5008~edad, 
+                      left = 0,
+                      data=b1)
+
+mod.Smco <- lm(v5008~edad,
+                      data=b1)
+
+stargazer(mod.stobit, type = "text")
+
+```
+---
+
+## Curva de regresión Tobit
+
+```{r}
+#| label: Curva de regresión Tobit
+
+x <- seq(0,60, 0.5)
+
+y <- pnorm((coef(mod.stobit)[1]+coef(mod.stobit)[2]*x)/exp(coef(mod.stobit)[3]))*(coef(mod.stobit)[1]+coef(mod.stobit)[2]*x)+exp(coef(mod.stobit)[3])*dnorm((coef(mod.stobit)[1]+coef(mod.stobit)[2]*x)/exp(coef(mod.stobit)[3]))
+
+plot(x=x,
+     y=y,
+     xlab = "Edad de las empresas manufactureras",
+     ylab="Cantidad de gerentes mujeres",
+     col="steelblue",
+     main="Modelo Tobit para la relación de edad y cantidad de mujeres gerentes en empresas manufactureras", 
+     type="l")
+
+
+```
+---
+
+## Interpretación:
+En el modelo *MCO* los efectos son constantes, mientras que, los efectos en el modelo *TOBIT* no lo son. Por lo tanto, mientras mayor es la edad de la empresa esto genera mayor contratación de mujeres en puestos gerenciales, es decir, cada efecto es mayor debido al aprendizaje empresarial.
+
+---
+## Evaluación informal del Modelo TOBIT (Problemas de Especificación)
+
+```{r}
+#| label: Interpretaciones no formales 
+#| warning: false
+
+probit.tobit <- glm(dico.propia~
+                  des_tamano+
+                 edad+
+                 totalpeoc+
+                   capital_social_nac_privado+
+                v5089+
+                  utilidad,
+                 data=b1,
+                 family = binomial(link = "probit"))
+
+stargazer(probit.tobit,
+ type = "text",
+ title = "Estimación Tobit y MCO del número de gerentes mujeres",
+ dep.var.labels = "Variable dependiente: Números de gerentes mujeres 0 y 1")
+```
+
+---
+
+## Evaluación de la validez del Modelo Tobit 
+Procedemos a usar los coeficientes para la comparación entre el modelo Probit y el Tobit, el objetivo es evaluar la validez del modelo *Tobit*.
+
+```{r}
+#| label: Validez del modelo TOBIT 
+
+z <- coef(probit.tobit)
+m <- coef(model.tobit)
+
+comparacion <- data.frame(z, (m[1:8])/exp(m[9]), z-(m[1:8])/exp(m[9]))
+names(comparacion) <- c("probit", "beta/sigma", "diferencia")
+comparacion
+```
+---
+
+### Calculando Sigma 
+```{r}
+#| label: Calculo del sigma 
+
+exp(m[9])
+```
+Se obtuvo que sigma=5,13, por lo cúal se puede reemplazar en la ecuación Tobit y al comparar esos betas con los de Probit se evidencia que no hay una "drástica" diferencia, por lo que, el modelo **TOBIT** es valido. Caso contrario se debería aplicar el *Modelo de dos partes*
+
+---
+# Conclusiones
+
+-   La variables **edad** (Años de funcionamiento de la empresa)y **totalpeoc** (Total personal ocupado) en los modelos **MCO** y **TOBIT*, resultaron estadísticamente significativas al 99%. Esto nos indica que a mayor edad de la empresa manufacturera existe un aumento en la contratación de mujeres que ocupan cargos en la gerencia de la empresa.
+---
+
+# Anexo
+
+## Diseño muestral
+
+---
+
+## Modelo con diseño muestral
+
+```{r}
+#| label: Anexo Diseño muestral 
+
+library("survey")
+
+diseño<-svydesign(ids = ~id_empresa, 
+          weights = ~f_exp, 
+          nest = TRUE,
+          data = b1)
+
+model.mco <- svyglm(v5008~
+                 des_tamano+
+                 edad+
+                 v5089+
+                capital_social_nac_privado+
+                utilidad,
+                data=b1,
+                design= diseño) 
+
+stargazer(model.mco,type="text")
+```
+---
+
+## Regresión MCO con datos censurados
+
+```{r}
+#| label: mco-datos-censurados1
+#| fig-cap: "Diagrama de dispersión y recta de regresión (MCO)"
+
+ggplot(data = b1, aes(x = v5089, y = v5008)) +
+  geom_point(
+    size = 2,
+    color = "#4e79a7",  # Color azul para los puntos
+    alpha = 0.7         # Transparencia para mejor visualización
+  ) + 
+  geom_smooth(
+    method = "lm",
+    se = FALSE,         # Sin banda de confianza
+    color = "#e15759",  # Color rojo para la línea
+    linewidth = 1.2     # Grosor de la línea
+  ) +
+  theme_bw() +
+  labs(
+    title = "Regresión MCO con datos censurados",
+    x = " Total de mujeres en la empresa(v5089)",
+    y = "Total de directores mujeres (v5008)",
+    caption = "Fuente: Elaboración propia"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+    axis.title = element_text(size = 10))
+
+```
+---
+## Nivel de censura
+
+
+
+```{r}
+#| label: mco-datos-censurados
+#| fig-cap: "Distribución de observaciones con nivel de detección"
+
+ggplot(data = b1, aes(x = v5089, y = v5008)) +
+  # Todos los puntos (base)
+  geom_point(
+    size = 2.5,
+    color = "#4e79a7",  # Color principal azul
+    alpha = 0.7
+  ) +
+  # Puntos censurados (debajo de 10)
+  geom_point(
+    data = filter(b1, v5008 < 10),
+    size = 2.5,
+    color = "#bab0ac",  # Color gris para valores censurados
+    alpha = 0.7
+  ) +
+  # Línea de detección
+  geom_hline(
+    yintercept = 10,             # Cambiado a 50 para consistencia con el filtro
+    linetype = "dashed",
+    color = "#e15759",           # Color rojo para mayor visibilidad
+    linewidth = 0.8
+  ) +
+  theme_bw(base_size = 12) +     # Tema base con tamaño de fuente
+  labs(
+    title = "Distribución de gerentes mujeres vs mujeres en la empresa",
+    subtitle = "Línea punteada: umbral de detección (50 gerentes)",
+    x = "Total de mujeres en la empresa (v5089)",
+    y = "Número de gerentes mujeres (v5008)",
+    caption = "Fuente: Elaboración propia | Valores grises: observaciones censuradas"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    legend.position = "none")
+
+```
+---
+
+
+---
